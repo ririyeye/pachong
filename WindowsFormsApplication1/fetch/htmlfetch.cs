@@ -38,6 +38,8 @@ namespace WindowsFormsApplication1.fetch
             try
             {
                 var nump = node.SelectNodes("div[1] / a[10]");
+                doc = null;
+                node = null;
                 return int.Parse(nump[0].InnerHtml);
             }
             catch (System.Exception ex)
@@ -63,7 +65,6 @@ namespace WindowsFormsApplication1.fetch
                         ret.Add(new watchrecord(eachanimate));
                     }
                 }
-                
             }
             return ret;
         }

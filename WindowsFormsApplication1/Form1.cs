@@ -38,7 +38,7 @@ namespace WindowsFormsApplication1
 
         void catchMain()
         {
-            msss = new mysqlSave("127.0.0.1", "3500", "ririyeye", "root");
+            msss = new mysqlSave("127.0.0.1", "3800", "ririyeye", "root");
             htmlfetch ht = new htmlfetch();
             ht.OnIndexComplete += (num) =>
             {
@@ -51,6 +51,7 @@ namespace WindowsFormsApplication1
             while (true)
             {
                 ht.catchMain();
+                Thread.Sleep(60000);
             }
         }
 

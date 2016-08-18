@@ -7,6 +7,7 @@ using System.Threading.Tasks.Dataflow;
 using MySql.Data;
 using System.Threading;
 using MySql.Data.MySqlClient;
+using static WindowsFormsApplication1.fetch.fetchBase;
 
 namespace WindowsFormsApplication1
 {
@@ -35,11 +36,19 @@ namespace WindowsFormsApplication1
             this.parallel_num = parallelNum;
             this.aimbase = "bilibili";
             mNotice = new ManualResetEventSlim();
-            mlink = new LinkedList<List<fetch.fetchBase.watchrecord>>();
-            threadpost = new Thread(postMain);
-            threadpost.Start();
+            mlink = new LinkedList<List<watchrecord>>();
+            //threadpost = new Thread(postMain);
+            //threadpost.Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
+            new Thread(postMain).Start();
         }
-        public void post(List<fetch.fetchBase.watchrecord> mw)
+        public void post(List<watchrecord> mw)
         {
             lock (mlink)
             {
@@ -52,7 +61,7 @@ namespace WindowsFormsApplication1
         {
             MySqlCommand com;
             MySqlConnection sqlcom;
-            List<fetch.fetchBase.watchrecord> mwriteObject;
+            List<watchrecord> usingnode = null;
             while (true)
             {
                 try
@@ -61,31 +70,107 @@ namespace WindowsFormsApplication1
                     com = new MySqlCommand();
                     com.Connection = sqlcom;
 
-                    var node = getNode();
-                    foreach (var sonNode in node)
+                    usingnode = getNode();
+
+                    for (int i = usingnode.Count - 1; i >= 0; i--)
                     {
-                        com.CommandText = string.Format("show create table {0}.{1}", aimbase,sonNode.avstring);
-                        try
-                        {
-                            com.ExecuteNonQuery();
-                        }
-                        catch (MySqlException)
-                        {
-                            com.CommandText = CreatTableString(sonNode.avstring);
-                            com.ExecuteNonQuery();
-                        }
-                        com.CommandText = CreatTableString(sonNode.avstring);
-                        com.ExecuteNonQuery();
+                        com.CommandText = string.Format("show create table {0}.{1}", aimbase, usingnode[i].avstring);
+                        tryfindtable(com, usingnode[i]);
+                        trywritedata(com, usingnode[i]);
+                        usingnode.RemoveAt(i);
                     }
+                    usingnode = null;
                 }
                 catch (System.Exception ex)
                 {
-                	
+                    if (usingnode != null)
+                    {
+                        post(usingnode);
+                        usingnode = null;
+                    }
                 }
             }
         }
 
-        List<fetch.fetchBase.watchrecord> getNode()
+        void trywritedata(MySqlCommand com, watchrecord wr, int trytime = 3)
+        {
+            Exception innexp = null;
+            for (int i=0;i<3;i++)
+            {
+                try
+                {
+                    com.CommandText = addMessageString(wr);
+                    com.ExecuteNonQuery();
+                    return;
+                }
+                catch (MySqlException exp)
+                {
+                    innexp = exp;
+                }
+            }
+            if (wr.avstring == "av5855395")
+            {
+            }
+            throw new WriteFailException(wr, innexp);
+        }
+
+        class WriteFailException : Exception
+        {
+            watchrecord wc;
+            public WriteFailException(watchrecord wr,Exception exp)
+                :base("写入失败",exp)
+            {
+                wc = wr;
+            }
+            public override string ToString()
+            {
+                return "写入失败@" + wc.avstring;
+            }
+        }
+
+        class NoTableFoundException : Exception
+        {
+            watchrecord wc;
+            public NoTableFoundException(watchrecord wr,Exception exp )
+                :base("没有找到数据表",exp)
+            {
+                wc = wr;
+            }
+            public override string ToString()
+            {
+                return "没有找到" + wc.avstring;
+            }
+        }
+
+        void tryfindtable(MySqlCommand com, watchrecord wr,int trytime = 3)
+        {
+            Exception exp = null;
+            for (int i=0;i<trytime;i++)
+            {
+                try
+                {
+                    com.ExecuteNonQuery();
+                    return;
+                }
+                catch (MySqlException)
+                {
+                    try
+                    {
+                        com.CommandText = CreatTableString(wr.avstring);
+                        com.ExecuteNonQuery();
+                        return;
+                    }
+                    catch (MySqlException ex)
+                    {
+                        exp = ex;
+                    }
+                }
+            }
+            throw new NoTableFoundException(wr,exp);
+        }
+
+
+        List<watchrecord> getNode()
         {
             mNotice.Wait();
             lock (mlink)
@@ -113,18 +198,32 @@ namespace WindowsFormsApplication1
         }
 
         string CreatTableString(string st)
-        {            
-            string orgin= "CREATE TABLE `"+st+ "` ("
+        {
+            /*
+CREATE TABLE `av112` (
+`insertTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+`watch` int(11) ZEROFILL NOT NULL ,
+`collect` int(11)  ZEROFILL NOT NULL ,
+`coin` int(11)  ZEROFILL NOT NULL ,
+`danmu` int(11)  ZEROFILL NOT NULL ,
+PRIMARY KEY(`insertTime`)) 
+ENGINE = MyISAM DEFAULT CHARSET = utf8 COMMENT = '自动生成'
+             **/
+            string orgin = "CREATE TABLE `"+st+ "` ("
             +"`insertTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
-            +"`watch` int(11) DEFAULT NULL,"
-            +"`collect` int(11) DEFAULT NULL,"
-            +"`coin` int(11) DEFAULT NULL,"
-            +"`danmu` int(11) DEFAULT NULL,"
-            +"PRIMARY KEY(`insertTime`)) "
+            + "`watch` int(11) ZEROFILL NOT NULL,"
+            + "`collect` int(11) ZEROFILL NOT NULL,"
+            + "`coin` int(11) ZEROFILL NOT NULL,"
+            + "`danmu` int(11) ZEROFILL NOT NULL,"
+            + "PRIMARY KEY(`insertTime`)) "
             +"ENGINE = MyISAM DEFAULT CHARSET = utf8 COMMENT = '自动生成'";
             return orgin;
         }
 
-
+        string addMessageString(watchrecord wc)
+        {
+            return string.Format("INSERT INTO `bilibili`.`{0}` (`watch`, `collect`, `coin`, `danmu`) VALUES('{1}', '{2}', '{3}', '{4}');"
+                ,wc.avstring, wc.watchCount, wc.collectCount, wc.coinCount, wc.danmuCount);
+        }
     }
 }

@@ -74,15 +74,15 @@ namespace WindowsFormsApplication1.fetch
             }
             return htmlCode;
         }
-
+        protected static Regex reg = new Regex(@"av\d+", RegexOptions.Compiled);
         public class watchrecord
-        {
-            protected static Regex reg = new Regex(@"av\d+");
+        { 
             public string title;
             public string watchCount;
             public string collectCount;
             public string danmuCount;
             public string avstring;
+            public string coinCount;
             HtmlNode fatherNode;
             public watchrecord(HtmlNode fathernode)
             {
@@ -93,6 +93,23 @@ namespace WindowsFormsApplication1.fetch
                 danmuCount = getMessage("div/div[2]/div[2]/span[2]/span");
                 collectCount = getMessage("div/div[2]/div[2]/span[3]/span");
                 avstring = getattribute("div / div[1] / a[1]");
+                if (avstring == "av5855395")
+                {
+
+                }
+                coinCount = "";
+                checestring(ref title);
+                checestring(ref watchCount);
+                checestring(ref danmuCount);
+                checestring(ref collectCount);
+                checestring(ref avstring);
+                checestring(ref coinCount);
+            }
+
+            void checestring(ref string st)
+            {
+                if ((st == "") || (st == null)||(st == "--"))
+                    st = "0";
             }
 
             string getattribute(string sel)
