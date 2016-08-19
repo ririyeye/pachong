@@ -8,6 +8,7 @@ using MySql.Data;
 using System.Threading;
 using MySql.Data.MySqlClient;
 using static WindowsFormsApplication1.fetch.fetchBase;
+using System.Text.RegularExpressions;
 
 namespace WindowsFormsApplication1
 {
@@ -17,6 +18,14 @@ namespace WindowsFormsApplication1
         LinkedList<List<fetch.fetchBase.watchrecord>> mlink;
 
         ManualResetEventSlim mNotice;
+
+        public delegate void WaitingChangeHandler(int num);
+        public event WaitingChangeHandler OnWaitingChange;
+        protected void trigWaitingChange(int num)
+        {
+            OnWaitingChange?.Invoke(num);
+        }
+
 
         string Addr;
         string port;
@@ -39,20 +48,17 @@ namespace WindowsFormsApplication1
             mlink = new LinkedList<List<watchrecord>>();
             //threadpost = new Thread(postMain);
             //threadpost.Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
-            new Thread(postMain).Start();
+            for (int i = 0; i < 100; i++)
+            {
+                new Thread(postMain).Start();
+            }
         }
         public void post(List<watchrecord> mw)
         {
             lock (mlink)
             {
                 mlink.AddLast(mw);
+                trigWaitingChange(mlink.Count);
                 mNotice.Set();
             }    
         }
@@ -70,16 +76,22 @@ namespace WindowsFormsApplication1
                     com = new MySqlCommand();
                     com.Connection = sqlcom;
 
-                    usingnode = getNode();
-
-                    for (int i = usingnode.Count - 1; i >= 0; i--)
+                    while(true)
                     {
-                        com.CommandText = string.Format("show create table {0}.{1}", aimbase, usingnode[i].avstring);
-                        tryfindtable(com, usingnode[i]);
-                        trywritedata(com, usingnode[i]);
-                        usingnode.RemoveAt(i);
+                        usingnode = getNode();
+                        if (usingnode == null)
+                        {
+                            continue;
+                        }
+                        for (int i = usingnode.Count - 1; i >= 0; i--)
+                        {
+                            com.CommandText = string.Format("show create table {0}.{1}", aimbase, usingnode[i].avstring);
+                            trywritedata(com, usingnode[i]);
+                            usingnode[i] = null;
+                            //usingnode.RemoveAt(i);
+                        }
+                        usingnode = null;
                     }
-                    usingnode = null;
                 }
                 catch (System.Exception ex)
                 {
@@ -91,7 +103,8 @@ namespace WindowsFormsApplication1
                 }
             }
         }
-
+        Regex regdup = new Regex("Duplicate", RegexOptions.Compiled);
+        Regex regexist = new Regex("exist", RegexOptions.Compiled);
         void trywritedata(MySqlCommand com, watchrecord wr, int trytime = 3)
         {
             Exception innexp = null;
@@ -105,11 +118,26 @@ namespace WindowsFormsApplication1
                 }
                 catch (MySqlException exp)
                 {
-                    innexp = exp;
+                    if (regdup.IsMatch(exp.Message) == true)
+                    {
+                        return;   
+                    }
+                    else if (regexist.IsMatch(exp.Message) == true)
+                    {
+                        try
+                        {
+                            tryCreatetable(com, wr);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            innexp = ex;
+                        }
+                    }
+                    else
+                    {
+                        innexp = exp;
+                    }
                 }
-            }
-            if (wr.avstring == "av5855395")
-            {
             }
             throw new WriteFailException(wr, innexp);
         }
@@ -141,8 +169,26 @@ namespace WindowsFormsApplication1
                 return "没有找到" + wc.avstring;
             }
         }
+        void tryCreatetable(MySqlCommand com, watchrecord wr, int trytime = 3)
+        {
+            Exception exp = null;
+            for (int i = 0; i < trytime; i++)
+            {
+                try
+                {
+                    com.CommandText = CreatTableString(wr.avstring);
+                    com.ExecuteNonQuery();
+                    return;
+                }
+                catch (MySqlException ex)
+                {
+                    exp = ex;
+                }
+            }
+            throw new NoTableFoundException(wr, exp);
+        }
 
-        void tryfindtable(MySqlCommand com, watchrecord wr,int trytime = 3)
+        void tryfindtable(MySqlCommand com, watchrecord wr,int trytime = 1)
         {
             Exception exp = null;
             for (int i=0;i<trytime;i++)
@@ -179,10 +225,14 @@ namespace WindowsFormsApplication1
                 {
                     var node = mlink.First.Value;
                     mlink.RemoveFirst();
+                    trigWaitingChange(mlink.Count);
                     return node;
                 }
-                mNotice.Set();
-                return null;
+                else
+                {
+                    mNotice.Reset();
+                    return null;
+                }
             }
         }
 
@@ -216,7 +266,7 @@ ENGINE = MyISAM DEFAULT CHARSET = utf8 COMMENT = '自动生成'
             + "`coin` int(11) ZEROFILL NOT NULL,"
             + "`danmu` int(11) ZEROFILL NOT NULL,"
             + "PRIMARY KEY(`insertTime`)) "
-            +"ENGINE = MyISAM DEFAULT CHARSET = utf8 COMMENT = '自动生成'";
+            +"ENGINE = innodb DEFAULT CHARSET = utf8 COMMENT = '自动生成'";
             return orgin;
         }
 

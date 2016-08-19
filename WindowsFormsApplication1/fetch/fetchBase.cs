@@ -47,7 +47,16 @@ namespace WindowsFormsApplication1.fetch
             webRequest.Method = "GET";
             webRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36";
             webRequest.Headers.Add("Accept-Encoding", "gzip, deflate");
-            HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
+            HttpWebResponse webResponse = null;
+            try
+            {
+                webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
+            }
+            catch (System.Exception ex)
+            {
+                return "";
+            }
+            
             if (webResponse.ContentEncoding.ToLower() == "gzip")//如果使用了GZip则先解压            
             {
                 using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
@@ -57,7 +66,14 @@ namespace WindowsFormsApplication1.fetch
                     {
                         using (StreamReader sr = new System.IO.StreamReader(zipStream, Encoding.GetEncoding("UTF-8")))
                         {
-                            htmlCode = sr.ReadToEnd();
+                            try
+                            {
+                                htmlCode = sr.ReadToEnd();
+                            }
+                            catch (Exception)
+                            {
+                                return null;
+                            }
                         }
                     }
                 }
@@ -83,21 +99,16 @@ namespace WindowsFormsApplication1.fetch
             public string danmuCount;
             public string avstring;
             public string coinCount;
-            HtmlNode fatherNode;
+            public string gettime;
             public watchrecord(HtmlNode fathernode)
             {
-                this.fatherNode = fathernode;
-
-                title = getMessage("div / div[1] / a[2]");
-                watchCount = getMessage("div / div[2] / div[2] / span[1] / span");
-                danmuCount = getMessage("div/div[2]/div[2]/span[2]/span");
-                collectCount = getMessage("div/div[2]/div[2]/span[3]/span");
-                avstring = getattribute("div / div[1] / a[1]");
-                if (avstring == "av5855395")
-                {
-
-                }
+                title = getMessage(fathernode,"div / div[1] / a[2]");
+                watchCount = getMessage(fathernode,"div / div[2] / div[2] / span[1] / span");
+                danmuCount = getMessage(fathernode,"div/div[2]/div[2]/span[2]/span");
+                collectCount = getMessage(fathernode,"div/div[2]/div[2]/span[3]/span");
+                avstring = getattribute(fathernode,"div / div[1] / a[1]");
                 coinCount = "";
+                gettime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 checestring(ref title);
                 checestring(ref watchCount);
                 checestring(ref danmuCount);
@@ -112,14 +123,14 @@ namespace WindowsFormsApplication1.fetch
                     st = "0";
             }
 
-            string getattribute(string sel)
+            string getattribute(HtmlNode fatherNode,string sel)
             {
                 var title = fatherNode.SelectNodes(sel)[0];
 
                 var avalue = title.Attributes["href"];
                 return reg.Match(avalue.Value).ToString();
             }
-            string getMessage(string sel)
+            string getMessage(HtmlNode fatherNode,string sel)
             {
                 var title = fatherNode.SelectNodes(sel);
                 return title[0].InnerHtml;

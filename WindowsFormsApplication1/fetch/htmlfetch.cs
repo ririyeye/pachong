@@ -26,20 +26,10 @@ namespace WindowsFormsApplication1.fetch
             HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             doc.LoadHtml(st);
             HtmlNode node = doc.DocumentNode;
-            var col = node.SelectNodes("ul/li");
-            if (col != null)
-            {
-                foreach (var eachanimate in col)
-                {
-                    watchrecord animateNode = new watchrecord(eachanimate);
-                }
-            }
 
             try
             {
                 var nump = node.SelectNodes("div[1] / a[10]");
-                doc = null;
-                node = null;
                 return int.Parse(nump[0].InnerHtml);
             }
             catch (System.Exception ex)
@@ -100,7 +90,7 @@ namespace WindowsFormsApplication1.fetch
                 }
                 trigIndexComplete(++comIndex);
             }
-            , new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 4 });
+            , new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8 });
 
             int num = firstcatch();
 
