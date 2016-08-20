@@ -24,30 +24,45 @@ namespace WindowsFormsApplication1
         {
             this.FormClosing += (a,b) => Environment.Exit(0);
             InitializeComponent();
+            new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(100);
+                    textBoxWaiting.Invoke(new Action(() =>
+                    {
+                        textBoxWaiting.Text = waitingNum.ToString();
+                    //}));
+                    //textBoxIndex.Invoke(new Action(() =>
+                    //{
+                        textBoxIndex.Text = completeNum.ToString();
+                    }));
+                };
+            }).Start();
+
+
         }
         mysqlSave msss;
-
+        int waitingNum;
+        int completeNum;
         void catchMain()
         {
-            msss = new mysqlSave("127.0.0.1", "3500", "ririyeye", "root");
-            msss.OnWaitingChange += (num) =>
+
+            msss = new mysqlSave("127.0.0.1", "3800", "ririyeye", "root");
+            msss.OnWaitingChange += (nums) =>
             {
-                textBoxWaiting.BeginInvoke(new Action(() =>
+                if (nums!=null)
                 {
-                    textBoxWaiting.Text = num.ToString();
-                }));
+                    waitingNum = nums.Sum();
+                }
             };
             htmlfetch ht = new htmlfetch();
             ht.OnIndexComplete += (num) =>
             {
-                textBoxIndex.BeginInvoke(new Action(() =>
-                {
-                    textBoxIndex.Text = num.ToString();
-                }));
+                completeNum = num;
             };
             ht.OnDataGet += Ht_OnDataGet;
             ht.catchMain();
-
         }
 
         private void Ht_OnDataGet(List<fetchBase.watchrecord> mlist)
@@ -57,7 +72,14 @@ namespace WindowsFormsApplication1
 
         private void button1_Click(object sender, EventArgs e)
         {
-            new Thread(catchMain).Start();
+            new Thread(() =>
+            {
+                while (true)
+                {
+                    new Thread(catchMain).Start();
+                    Thread.Sleep(60000);
+                }
+            }).Start();
         }
     }
 }

@@ -41,8 +41,8 @@ namespace WindowsFormsApplication1.fetch
         override public List<watchrecord> catchIndex(int index)
         {
             string st = GetHtmlCode(getpageString(index));
-            List<watchrecord> ret = new List<watchrecord>(20);
-            if (st != "")
+            
+            if (st != "" && st != null)
             {
                 HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
                 doc.LoadHtml(st);
@@ -50,13 +50,15 @@ namespace WindowsFormsApplication1.fetch
                 var col = node.SelectNodes("ul/li");
                 if (col != null)
                 {
+                    List<watchrecord> ret = new List<watchrecord>(20);
                     foreach (var eachanimate in col)
                     {
                         ret.Add(new watchrecord(eachanimate));
                     }
+                    return ret;
                 }
             }
-            return ret;
+            return null;
         }
 
         string getpageString(int num)
@@ -79,6 +81,10 @@ namespace WindowsFormsApplication1.fetch
                     try
                     {
                         var mlist = catchIndex(i);
+                        if (mlist == null)
+                        {
+                            continue;
+                        }
                         trigDateGet(mlist);
                         break;
                     }

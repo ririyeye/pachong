@@ -90,7 +90,7 @@ namespace WindowsFormsApplication1.fetch
             }
             return htmlCode;
         }
-        protected static Regex reg = new Regex(@"av\d+", RegexOptions.Compiled);
+
         public class watchrecord
         { 
             public string title;
@@ -126,9 +126,8 @@ namespace WindowsFormsApplication1.fetch
             string getattribute(HtmlNode fatherNode,string sel)
             {
                 var title = fatherNode.SelectNodes(sel)[0];
-
                 var avalue = title.Attributes["href"];
-                return reg.Match(avalue.Value).ToString();
+                return avalue.Value;
             }
             string getMessage(HtmlNode fatherNode,string sel)
             {
