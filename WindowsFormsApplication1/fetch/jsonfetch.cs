@@ -16,6 +16,8 @@ namespace WindowsFormsApplication1.fetch
 
             proBlock = new myTPLBase<int>((i) =>
             {
+                bool succflag = false;
+
                 for (int trytime = 0; trytime < 10; trytime++)
                 {
                     try
@@ -26,17 +28,25 @@ namespace WindowsFormsApplication1.fetch
                             continue;
                         }
                         trigDateGet(mlist);
+                        succflag = true;
                         break;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
+                        succflag = false;
                         continue;
                     }
-
                 }
-                trigIndexComplete(++comIndex);
+                if (succflag == true)
+                {
+                    trigIndexComplete(++comIndex);
+                }
+                else
+                {
+                    proBlock.Post(i);
+                }
             },
-            8
+            80
             //new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8}
             );
             int num = firstcatch();
@@ -87,6 +97,22 @@ namespace WindowsFormsApplication1.fetch
 
         public override int firstcatch()
         {
+            int MaxTryTime = 10;
+
+            for (int i = 0; i < MaxTryTime; i++)
+            {
+                try
+                {
+                    return tryfirstcatch();
+                }
+                catch (Exception)
+                {
+                }
+            }
+            return 0;
+        }
+        public int tryfirstcatch()
+        {            
             string st = GetHtmlCode(getpagejsonString(1));
             string jsonst = Lostjqury(st);
             var js = (JObject)JsonConvert.DeserializeObject(jsonst);

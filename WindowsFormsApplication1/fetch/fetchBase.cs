@@ -52,11 +52,11 @@ namespace WindowsFormsApplication1.fetch
             {
                 webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
             }
-            catch (WebException ex)
+            catch (WebException)
             {
                 return null;
             }
-            catch(Exception exp)
+            catch(Exception)
             {
                 return null;
             }

@@ -32,7 +32,7 @@ namespace WindowsFormsApplication1.fetch
                 var nump = node.SelectNodes("div[1] / a[10]");
                 return int.Parse(nump[0].InnerHtml);
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
                 return 0;
             }
@@ -88,7 +88,7 @@ namespace WindowsFormsApplication1.fetch
                         trigDateGet(mlist);
                         break;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         continue;
                     }

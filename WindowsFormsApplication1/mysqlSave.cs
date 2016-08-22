@@ -82,7 +82,7 @@ namespace WindowsFormsApplication1
             {
                 num = int.Parse(wr.avstring);
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
                 return;
             }
@@ -173,7 +173,7 @@ namespace WindowsFormsApplication1
                             usingnode = null;
                         }
                     }
-                    catch (System.Exception ex)
+                    catch (System.Exception)
                     {
                         try
                         {
