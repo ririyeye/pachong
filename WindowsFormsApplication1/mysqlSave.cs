@@ -27,9 +27,10 @@ namespace WindowsFormsApplication1
         string aimbase;
 
         int parallelNum;
+        int parellelNumPlus;
         SaveNode[]SaveNodes;
         int[] WaitingGroup;
-        public mysqlSave(string Addr,string port,string password,string user,string aimbase = "bilibili", int parallelNum = 10)
+        public mysqlSave(string Addr,string port,string password,string user,string aimbase = "bilibili", int parallelNum = 10,int parellelNumPlus = 2)
         {
             this.Addr = Addr;
             this.port = port;
@@ -37,12 +38,13 @@ namespace WindowsFormsApplication1
             this.user = user;
             this.parallelNum = parallelNum;
             this.aimbase = aimbase;
-            
+            this.parellelNumPlus = parellelNumPlus;
+
             SaveNodes = new SaveNode[20];
             WaitingGroup = new int[20];
             for (int i=0;i<parallelNum;i++)
             {
-                SaveNodes[i] = new SaveNode(parallelNum, i, Addr, port, password, user,aimbase);
+                SaveNodes[i] = new SaveNode(parallelNum, i, Addr, port, password, user,aimbase, parellelNumPlus);
                 SaveNodes[i].OnWaitingChange += (index,num) =>
                 {
                     WaitingGroup[index] = num;
@@ -99,7 +101,8 @@ namespace WindowsFormsApplication1
 
             int index;
             int total;
-            Thread mthread;
+            Thread[] mthreads;
+            int mParellelNum;
             /// <summary>
             /// 登入信息
             /// </summary>
@@ -113,21 +116,27 @@ namespace WindowsFormsApplication1
 
             LinkedList<watchrecord> mlink = new LinkedList<watchrecord>();
             ManualResetEventSlim mNotice;
-            public SaveNode(int total,int index,string Addr, string port, string password, string user,string aimbase)
+            public SaveNode(int total,int index,string Addr, string port, string password, string user,string aimbase,int parallelNum)
             {
                 this.Addr = Addr;
                 this.port = port;
                 this.password = password;
                 this.user = user;
                 this.aimbase = aimbase;
-
+                this.mParellelNum = parallelNum;
 
                 this.total = total;
                 this.index = index;
                 mNotice = new ManualResetEventSlim();
                 mNotice.Reset();
-                mthread = new Thread(nodeMain);
-                mthread.Start();
+
+                mthreads = new Thread[mParellelNum];
+                
+                for (int i=0;i<parallelNum;i++)
+                {
+                    mthreads[i] = new Thread(nodeMain);
+                    mthreads[i].Start();
+                }
             }
 
             void nodeMain()
@@ -171,7 +180,6 @@ namespace WindowsFormsApplication1
                             if (sqlcom != null)
                             {
                                 sqlcom.Close();
-                                sqlcom = null;
                             }
                         }
                         catch (System.Exception)
@@ -181,6 +189,7 @@ namespace WindowsFormsApplication1
                     }
                     finally
                     {
+                        sqlcom = null;
                         if (usingnode != null)
                         {
                             post(usingnode);
@@ -202,27 +211,36 @@ namespace WindowsFormsApplication1
 
             watchrecord getNode()
             {
-                if (mNotice.Wait(5000) == false)
+                int enterTime = Environment.TickCount;
+                bool flag = false;
+                while(true)
                 {
-                    return null;
-                }
-
-                lock (mlink)
-                {
-                    if (mlink.Count > 0)
+                    flag = mNotice.Wait(1000);
+                    if (flag == false)
                     {
-                        var node = mlink.First.Value;
-                        mlink.RemoveFirst();
-                        MtrigWaitingChange(mlink.Count);
-                        if (mlink.Count == 0)
+                        if (Environment.TickCount - enterTime >5000)
                         {
-                            mNotice.Reset();
+                            return null;
                         }
-                        return node;
                     }
-                    else
+
+                    lock (mlink)
                     {
-                        return null;
+                        if (mlink.Count > 0)
+                        {
+                            var node = mlink.First.Value;
+                            mlink.RemoveFirst();
+                            MtrigWaitingChange(mlink.Count);
+                            if (mlink.Count == 0)
+                            {
+                                mNotice.Reset();
+                            }
+                            return node;
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
                 }
             }
@@ -234,6 +252,7 @@ namespace WindowsFormsApplication1
                 {
                     try
                     {
+                        wr.deliverCount++;
                         com.CommandText = addMessageString(wr);
                         com.ExecuteNonQuery();
                         return;
@@ -370,17 +389,29 @@ CREATE TABLE `bilibili`.`new_table` (
   `coin` INT ZEROFILL NOT NULL,
   `danmu` INT ZEROFILL NOT NULL,
   PRIMARY KEY (`av`, `insertTime`));
+
+
+
+CREATE TABLE `bilibili`.`new_table` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `av` INT NOT NULL,
+  `insertTime` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `watch` INT ZEROFILL NOT NULL,
+  `collect` INT ZEROFILL NOT NULL,
+  `coin` INT ZEROFILL NOT NULL,
+  `danmu` INT ZEROFILL NOT NULL,
+  PRIMARY KEY (`id`));
                  **/
                 string orgin = "CREATE TABLE `"+ getTableName()
                 + "` ("
                 + "`av` INT NOT NULL,"
-                + "`insertTime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                + "`insertTime` timestamp NOT NULL,"
                 + "`watch` int(11) ZEROFILL NOT NULL,"
                 + "`collect` int(11) ZEROFILL NOT NULL,"
                 + "`coin` int(11) ZEROFILL NOT NULL,"
                 + "`danmu` int(11) ZEROFILL NOT NULL,"
-                + "PRIMARY KEY(`av`, `insertTime`)) "
-                + "ENGINE = myisam DEFAULT CHARSET = utf8 COMMENT = '自动生成'";
+                + "PRIMARY KEY(`av`,`insertTime`)) "
+                + "ENGINE = innodb DEFAULT CHARSET = utf8 COMMENT = '自动生成'";
                 return orgin;
             }
 
@@ -392,8 +423,8 @@ CREATE TABLE `bilibili`.`new_table` (
             string addMessageString(watchrecord wc)
             {
                 //INSERT INTO `bilibili`.`new_table` (`av`, `watch`, `collect`, `coin`, `danmu`) VALUES ('1', '2', '3', '4', '5');
-                return string.Format("INSERT INTO `bilibili`.`{0}` (`av`,`watch`, `collect`, `coin`, `danmu`) VALUES('{1}', '{2}', '{3}', '{4}','{5}');"
-                    , getTableName(),wc.avstring, wc.watchCount, wc.collectCount, wc.coinCount, wc.danmuCount);
+                return string.Format("INSERT INTO `bilibili`.`{0}` (`av`,`insertTime`,`watch`, `collect`, `coin`, `danmu`) VALUES('{1}','{2}', '{3}', '{4}', '{5}','{6}');"
+                    , getTableName(),wc.avstring,wc.gettime, wc.watchCount, wc.collectCount, wc.coinCount, wc.danmuCount);
             }
         }
     }

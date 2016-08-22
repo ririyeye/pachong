@@ -1,28 +1,59 @@
-﻿using HtmlAgilityPack;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
 namespace WindowsFormsApplication1.fetch
 {
     class jsonfetch : fetchBase
     {
+        myTPLBase<int> proBlock;
+
         override public void catchMain()
         {
-            while(true)
+            int comIndex = 0;
+
+            proBlock = new myTPLBase<int>((i) =>
             {
-                Thread.Sleep(100);
+                for (int trytime = 0; trytime < 10; trytime++)
+                {
+                    try
+                    {
+                        var mlist = catchIndex(i);
+                        if (mlist == null)
+                        {
+                            continue;
+                        }
+                        trigDateGet(mlist);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        continue;
+                    }
+
+                }
+                trigIndexComplete(++comIndex);
+            },
+            8
+            //new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8}
+            );
+            int num = firstcatch();
+
+            for (int i = 1; i < num; i++)
+            {
+                proBlock.Post(i);
             }
         }
 
 
         public static string Lostjqury(string Str)
         {
+            if (Str == null)
+            {
+                return Str;
+            }
             int length = Str.Length;
             int leftnum = 0;
             for (; leftnum < length; leftnum++)
@@ -56,12 +87,30 @@ namespace WindowsFormsApplication1.fetch
 
         public override int firstcatch()
         {
-            throw new NotImplementedException();
+            string st = GetHtmlCode(getpagejsonString(1));
+            string jsonst = Lostjqury(st);
+            var js = (JObject)JsonConvert.DeserializeObject(jsonst);
+            var p = js["data"]["page"];
+            int total = p["count"].Value<int>();
+            int size = p["size"].Value<int>();
+
+            return total/size + 1;
         }
 
         public override List<watchrecord> catchIndex(int index)
         {
-            throw new NotImplementedException();
+            string st = GetHtmlCode(getpagejsonString(index));
+            if (st == null)
+                return null;
+            string jsonst = Lostjqury(st);
+            var js = (JObject)JsonConvert.DeserializeObject(jsonst);
+            var p = js["data"]["archives"].Children();
+            List<watchrecord> ret = new List<watchrecord>(20);
+            foreach (var node in p)
+            {
+                ret.Add(new watchrecord(node));
+            }
+            return ret;
         }
     }
 }

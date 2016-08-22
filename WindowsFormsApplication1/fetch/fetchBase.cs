@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,10 +39,9 @@ namespace WindowsFormsApplication1.fetch
         }
 
 
-
-        protected string GetHtmlCode(string url)
+        private string tryHtmlCode(string url)
         {
-            string htmlCode;
+            string htmlCode = null;
             HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
             webRequest.Timeout = 5000;
             webRequest.Method = "GET";
@@ -52,11 +52,15 @@ namespace WindowsFormsApplication1.fetch
             {
                 webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
             }
-            catch (System.Exception ex)
+            catch (WebException ex)
             {
-                return "";
+                return null;
             }
-            
+            catch(Exception exp)
+            {
+                return null;
+            }
+
             if (webResponse.ContentEncoding.ToLower() == "gzip")//如果使用了GZip则先解压            
             {
                 using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
@@ -89,6 +93,19 @@ namespace WindowsFormsApplication1.fetch
                 }
             }
             return htmlCode;
+
+        }
+        protected string GetHtmlCode(string url)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                string st = tryHtmlCode(url);
+                if (st != null)
+                {
+                    return st;
+                }
+            }
+            return null;
         }
 
         public class watchrecord
@@ -100,6 +117,7 @@ namespace WindowsFormsApplication1.fetch
             public string avstring;
             public string coinCount;
             public string gettime;
+            public int deliverCount;
             public watchrecord(HtmlNode fathernode)
             {
                 title = getMessage(fathernode,"div / div[1] / a[2]");
@@ -108,6 +126,23 @@ namespace WindowsFormsApplication1.fetch
                 collectCount = getMessage(fathernode,"div/div[2]/div[2]/span[3]/span");
                 avstring = getattribute(fathernode,"div / div[1] / a[1]");
                 coinCount = "";
+                gettime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                checestring(ref title);
+                checestring(ref watchCount);
+                checestring(ref danmuCount);
+                checestring(ref collectCount);
+                checestring(ref avstring);
+                checestring(ref coinCount);
+            }
+
+            public watchrecord(JToken fatherjson)
+            {
+                title = fatherjson["title"].Value<string>();
+                avstring = fatherjson["aid"].Value<string>();
+                watchCount = fatherjson["stat"]["view"].Value<string>();
+                danmuCount = fatherjson["stat"]["danmaku"].Value<string>();
+                collectCount = fatherjson["stat"]["favorite"].Value<string>();
+                coinCount = fatherjson["stat"]["coin"].Value<string>();
                 gettime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 checestring(ref title);
                 checestring(ref watchCount);

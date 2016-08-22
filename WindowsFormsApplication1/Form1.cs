@@ -24,6 +24,16 @@ namespace WindowsFormsApplication1
         {
             this.FormClosing += (a,b) => Environment.Exit(0);
             InitializeComponent();
+
+            msss = new mysqlSave("127.0.0.1", "3500", "ririyeye", "root");
+            msss.OnWaitingChange += (nums) =>
+            {
+                if (nums != null)
+                {
+                    waitingNum = nums.Sum();
+                }
+            };
+
             new Thread(() =>
             {
                 while (true)
@@ -32,42 +42,23 @@ namespace WindowsFormsApplication1
                     textBoxWaiting.Invoke(new Action(() =>
                     {
                         textBoxWaiting.Text = waitingNum.ToString();
-                    //}));
-                    //textBoxIndex.Invoke(new Action(() =>
-                    //{
                         textBoxIndex.Text = completeNum.ToString();
                     }));
                 };
             }).Start();
-
-
         }
         mysqlSave msss;
         int waitingNum;
         int completeNum;
         void catchMain()
         {
-
-            msss = new mysqlSave("127.0.0.1", "3800", "ririyeye", "root");
-            msss.OnWaitingChange += (nums) =>
-            {
-                if (nums!=null)
-                {
-                    waitingNum = nums.Sum();
-                }
-            };
-            htmlfetch ht = new htmlfetch();
+            jsonfetch ht = new jsonfetch();
             ht.OnIndexComplete += (num) =>
             {
                 completeNum = num;
             };
-            ht.OnDataGet += Ht_OnDataGet;
+            ht.OnDataGet += (List<fetchBase.watchrecord> mlist) => msss.post(mlist); ;
             ht.catchMain();
-        }
-
-        private void Ht_OnDataGet(List<fetchBase.watchrecord> mlist)
-        {
-            msss.post(mlist);
         }
 
         private void button1_Click(object sender, EventArgs e)
