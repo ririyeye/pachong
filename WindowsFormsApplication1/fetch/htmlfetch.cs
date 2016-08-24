@@ -66,47 +66,6 @@ namespace WindowsFormsApplication1.fetch
             string st = getdataString();
             //http://www.bilibili.com/list/default-33-1-2016-8-10~2016-8-17.html
             return "http://www.bilibili.com/list/default-33-" + num.ToString() +"-"+st + ".html";
-        }        
-
-        ActionBlock<int> proBlock;
-
-        override public void catchMain()
-        {
-            int comIndex = 0;
-
-            proBlock = new ActionBlock<int>((i) =>
-            {
-                for (int trytime = 0; trytime < 10; trytime++)
-                {
-                    try
-                    {
-                        var mlist = catchIndex(i);
-                        if (mlist == null)
-                        {
-                            continue;
-                        }
-                        trigDateGet(mlist);
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        continue;
-                    }
-                    
-                }
-                trigIndexComplete(++comIndex);
-            }
-            , new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8 });
-
-            int num = firstcatch();
-
-            for (int i = 1; i < num; i++)
-            {
-                proBlock.Post(i);
-            }
-            proBlock.Complete();
-            proBlock.Completion.Wait();
-            trigRoundComplete(1);
         }
     }
 }

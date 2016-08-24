@@ -15,7 +15,54 @@ namespace WindowsFormsApplication1.fetch
     {
         abstract public int firstcatch();
         abstract public List<watchrecord> catchIndex(int index);
-        abstract public void catchMain();
+
+        myTPLBase<int> proBlock;
+        virtual public void catchMain()
+        {
+            int comIndex = 0;
+
+            proBlock = new myTPLBase<int>((i) =>
+            {
+                bool succflag = false;
+
+                for (int trytime = 0; trytime < 10; trytime++)
+                {
+                    try
+                    {
+                        var mlist = catchIndex(i);
+                        if (mlist == null)
+                        {
+                            continue;
+                        }
+                        trigDateGet(mlist);
+                        succflag = true;
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        succflag = false;
+                        continue;
+                    }
+                }
+                if (succflag == true)
+                {
+                    trigIndexComplete(++comIndex);
+                }
+                else
+                {
+                    proBlock.Post(i);
+                }
+            },
+            8
+            //new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8}
+            );
+            int num = firstcatch();
+
+            for (int i = 1; i < num; i++)
+            {
+                proBlock.Post(i);
+            }
+        }
 
         public delegate void IndexHandler(int num);
         public event IndexHandler OnIndexComplete;
@@ -43,57 +90,40 @@ namespace WindowsFormsApplication1.fetch
         {
             string htmlCode = null;
             HttpWebRequest webRequest = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
-            webRequest.Timeout = 5000;
+            webRequest.Timeout = 50000;
+            webRequest.ReadWriteTimeout = 50000;
             webRequest.Method = "GET";
             webRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36";
             webRequest.Headers.Add("Accept-Encoding", "gzip, deflate");
-            HttpWebResponse webResponse = null;
-            try
-            {
-                webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse();
-            }
-            catch (WebException)
-            {
-                return null;
-            }
-            catch(Exception)
-            {
-                return null;
-            }
 
-            if (webResponse.ContentEncoding.ToLower() == "gzip")//如果使用了GZip则先解压            
+            using (HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
             {
-                using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
+                if (webResponse.ContentEncoding.ToLower() == "gzip")//如果使用了GZip则先解压            
                 {
-                    using (var zipStream =
-                        new System.IO.Compression.GZipStream(streamReceive, System.IO.Compression.CompressionMode.Decompress))
+                    using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
                     {
-                        using (StreamReader sr = new System.IO.StreamReader(zipStream, Encoding.GetEncoding("UTF-8")))
+                        using (var zipStream =
+                            new System.IO.Compression.GZipStream(streamReceive, System.IO.Compression.CompressionMode.Decompress))
                         {
-                            try
+                            using (StreamReader sr = new System.IO.StreamReader(zipStream, Encoding.GetEncoding("UTF-8")))
                             {
                                 htmlCode = sr.ReadToEnd();
-                            }
-                            catch (Exception)
-                            {
-                                return null;
                             }
                         }
                     }
                 }
-            }
-            else
-            {
-                using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
+                else
                 {
-                    using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, Encoding.Default))
+                    using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
                     {
-                        htmlCode = sr.ReadToEnd();
+                        using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, Encoding.Default))
+                        {
+                            htmlCode = sr.ReadToEnd();
+                        }
                     }
                 }
             }
             return htmlCode;
-
         }
         protected string GetHtmlCode(string url)
         {

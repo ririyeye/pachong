@@ -25,7 +25,7 @@ namespace WindowsFormsApplication1
             this.FormClosing += (a,b) => Environment.Exit(0);
             InitializeComponent();
 
-            msss = new mysqlSave("192.168.31.210", "3800", "ririyeye", "root");
+            msss = new mysqlSave("127.0.0.1", "3500", "ririyeye", "root");
             msss.OnWaitingChange += (nums) =>
             {
                 if (nums != null)

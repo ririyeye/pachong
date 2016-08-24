@@ -71,6 +71,7 @@ namespace WindowsFormsApplication1
                 }
             }
         }
+
         /// <summary>
         /// 分配算法
         /// </summary>
@@ -115,7 +116,7 @@ namespace WindowsFormsApplication1
             //Regex regexist = new Regex("exist", RegexOptions.Compiled);
 
             LinkedList<watchrecord> mlink = new LinkedList<watchrecord>();
-            ManualResetEventSlim mNotice;
+            SemaphoreSlim mNotice;
             public SaveNode(int total,int index,string Addr, string port, string password, string user,string aimbase,int parallelNum)
             {
                 this.Addr = Addr;
@@ -127,8 +128,7 @@ namespace WindowsFormsApplication1
 
                 this.total = total;
                 this.index = index;
-                mNotice = new ManualResetEventSlim();
-                mNotice.Reset();
+                mNotice = new SemaphoreSlim(0);
 
                 mthreads = new Thread[mParellelNum];
                 
@@ -205,25 +205,15 @@ namespace WindowsFormsApplication1
                 {
                     mlink.AddLast(mw);
                     MtrigWaitingChange(mlink.Count);
-                    mNotice.Set();
+                    mNotice.Release();
                 }
             }
 
             watchrecord getNode()
             {
-                int enterTime = Environment.TickCount;
-                bool flag = false;
-                while(true)
+                bool nodeflag = mNotice.Wait(5000);
+                if (nodeflag == true)
                 {
-                    flag = mNotice.Wait(1000);
-                    if (flag == false)
-                    {
-                        if (Environment.TickCount - enterTime >5000)
-                        {
-                            return null;
-                        }
-                    }
-
                     lock (mlink)
                     {
                         if (mlink.Count > 0)
@@ -231,18 +221,13 @@ namespace WindowsFormsApplication1
                             var node = mlink.First.Value;
                             mlink.RemoveFirst();
                             MtrigWaitingChange(mlink.Count);
-                            if (mlink.Count == 0)
-                            {
-                                mNotice.Reset();
-                            }
                             return node;
-                        }
-                        else
-                        {
-                            continue;
                         }
                     }
                 }
+                else
+                    return getNode();
+                return null;
             }
 
             void trywritedata(MySqlCommand com, watchrecord wr, int trytime = 3)

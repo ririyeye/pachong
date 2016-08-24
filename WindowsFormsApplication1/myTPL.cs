@@ -9,9 +9,9 @@ namespace WindowsFormsApplication1
 {
     class myTPLBase<T>
     {
-        int parallelNum { get; }
+        public int parallelNum { get; }
         public int currentRunningThreadNum { get; private set; }
-        public int releaseTick { get; set; }
+        public int releaseTick { get;}
         Action<T> act;
         LinkedList<T> mlink;
         SemaphoreSlim mNotice;

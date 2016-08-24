@@ -8,56 +8,6 @@ namespace WindowsFormsApplication1.fetch
 {
     class jsonfetch : fetchBase
     {
-        myTPLBase<int> proBlock;
-
-        override public void catchMain()
-        {
-            int comIndex = 0;
-
-            proBlock = new myTPLBase<int>((i) =>
-            {
-                bool succflag = false;
-
-                for (int trytime = 0; trytime < 10; trytime++)
-                {
-                    try
-                    {
-                        var mlist = catchIndex(i);
-                        if (mlist == null)
-                        {
-                            continue;
-                        }
-                        trigDateGet(mlist);
-                        succflag = true;
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        succflag = false;
-                        continue;
-                    }
-                }
-                if (succflag == true)
-                {
-                    trigIndexComplete(++comIndex);
-                }
-                else
-                {
-                    proBlock.Post(i);
-                }
-            },
-            80
-            //new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8}
-            );
-            int num = firstcatch();
-
-            for (int i = 1; i < num; i++)
-            {
-                proBlock.Post(i);
-            }
-        }
-
-
         public static string Lostjqury(string Str)
         {
             if (Str == null)
