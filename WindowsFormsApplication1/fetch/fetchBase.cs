@@ -53,7 +53,7 @@ namespace WindowsFormsApplication1.fetch
                     proBlock.Post(i);
                 }
             },
-            8
+            16
             //new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 8}
             );
             int num = firstcatch();
@@ -98,27 +98,53 @@ namespace WindowsFormsApplication1.fetch
 
             using (HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
             {
-                if (webResponse.ContentEncoding.ToLower() == "gzip")//如果使用了GZip则先解压            
+                string ContentEncoding = webResponse.ContentEncoding.ToLower();
+                Encoding encoding;
+                try
+                {
+                    encoding = Encoding.GetEncoding(webResponse.CharacterSet);
+                }
+                catch (ArgumentException ex)
+                {
+                    encoding = Encoding.Default;
+                }
+
+                if (ContentEncoding.Length > 2)
                 {
                     using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
                     {
-                        using (var zipStream =
-                            new System.IO.Compression.GZipStream(streamReceive, System.IO.Compression.CompressionMode.Decompress))
+                        if (ContentEncoding == "gzip")//如果使用了GZip则先解压            
                         {
-                            using (StreamReader sr = new System.IO.StreamReader(zipStream, Encoding.GetEncoding("UTF-8")))
+                            using (var zipStream =
+                                new System.IO.Compression.GZipStream(streamReceive,
+                                System.IO.Compression.CompressionMode.Decompress))
+                            {
+                                using (StreamReader sr = new System.IO.StreamReader(
+                                    zipStream, encoding))
+                                {
+                                    htmlCode = sr.ReadToEnd();
+                                }
+                            }
+                        }
+                        else if (ContentEncoding == "deflate")
+                        {
+                            using (var defStream =
+                                new System.IO.Compression.DeflateStream(streamReceive,
+                                System.IO.Compression.CompressionMode.Decompress))
+                            {
+                                using (StreamReader sr = new System.IO.StreamReader(
+                                    defStream, encoding))
+                                {
+                                    htmlCode = sr.ReadToEnd();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, encoding))
                             {
                                 htmlCode = sr.ReadToEnd();
                             }
-                        }
-                    }
-                }
-                else
-                {
-                    using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
-                    {
-                        using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, Encoding.Default))
-                        {
-                            htmlCode = sr.ReadToEnd();
                         }
                     }
                 }
