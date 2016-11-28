@@ -25,7 +25,7 @@ namespace WindowsFormsApplication1
             this.FormClosing += (a,b) => Environment.Exit(0);
             InitializeComponent();
 
-            msss = new mysqlSave("127.0.0.1", "3500", "ririyeye", "root");
+            msss = new mysqlSave("127.0.0.1", "3800", "ririyeye", "root");
             msss.OnWaitingChange += (nums) =>
             {
                 if (nums != null)
@@ -46,7 +46,20 @@ namespace WindowsFormsApplication1
                     }));
                 };
             }).Start();
+
+            //new Thread(test).Start();
         }
+
+        void test()
+        {
+            testfetch.catchMain();
+
+
+        }
+
+        danmuFetch testfetch = new danmuFetch();
+
+
         mysqlSave msss;
         int waitingNum;
         int completeNum;
@@ -70,7 +83,8 @@ namespace WindowsFormsApplication1
                     new Thread(catchMain).Start();
                     Thread.Sleep(60000);
                 }
-            }).Start();
+            })
+            .Start();
         }
     }
 }

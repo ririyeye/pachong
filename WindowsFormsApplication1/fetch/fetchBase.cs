@@ -8,7 +8,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using System.Web;
 namespace WindowsFormsApplication1.fetch
 {
     abstract class fetchBase
@@ -94,7 +94,7 @@ namespace WindowsFormsApplication1.fetch
             webRequest.ReadWriteTimeout = 50000;
             webRequest.Method = "GET";
             webRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36";
-            webRequest.Headers.Add("Accept-Encoding", "gzip, deflate");
+            webRequest.Headers.Add("Accept-Encoding", "gzip, deflate, sdch");
 
             using (HttpWebResponse webResponse = (System.Net.HttpWebResponse)webRequest.GetResponse())
             {
@@ -109,10 +109,11 @@ namespace WindowsFormsApplication1.fetch
                     encoding = Encoding.Default;
                 }
 
-                if (ContentEncoding.Length > 2)
+                using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
                 {
-                    using (System.IO.Stream streamReceive = webResponse.GetResponseStream())
+                    if (ContentEncoding.Length > 2)
                     {
+
                         if (ContentEncoding == "gzip")//如果使用了GZip则先解压            
                         {
                             using (var zipStream =
@@ -139,12 +140,12 @@ namespace WindowsFormsApplication1.fetch
                                 }
                             }
                         }
-                        else
+                    }
+                    else
+                    {
+                        using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, encoding))
                         {
-                            using (System.IO.StreamReader sr = new System.IO.StreamReader(streamReceive, encoding))
-                            {
-                                htmlCode = sr.ReadToEnd();
-                            }
+                            htmlCode = sr.ReadToEnd();
                         }
                     }
                 }

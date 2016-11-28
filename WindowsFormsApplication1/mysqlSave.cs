@@ -258,6 +258,11 @@ namespace WindowsFormsApplication1
                             {
                                 innexp = ex;
                             }
+                        }                        
+                        else if (exp.Message.Contains("Out of range value for column") == true)//参数无法写入
+                        {
+                            System.Diagnostics.Debug.WriteLine(wr.avstring);
+                            return;
                         }
                         else
                         {

@@ -78,6 +78,7 @@ namespace WindowsFormsApplication1.fetch
             string st = GetHtmlCode(getpagejsonString(index));
             if (st == null)
                 return null;
+
             string jsonst = Lostjqury(st);
             var js = (JObject)JsonConvert.DeserializeObject(jsonst);
             var p = js["data"]["archives"].Children();
